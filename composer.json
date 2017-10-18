@@ -1,0 +1,17 @@
+{
+    "name": "niksnv/TreeView",
+    "description": "test",
+    "minimum-stability": "stable",
+    "keywords": ["view","tree","expression"],
+    "homepage": "http://google.ru",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "NikSNV",
+            "email": "nikitasnv@mail.ru"
+        }
+    ],
+    "autoload": {
+        "psr-0": {"niksnv": ""}
+    }
+}
