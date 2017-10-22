@@ -12,6 +12,6 @@
         }
     ],
     "autoload": {
-        "psr-0": {"niksnv": ""}
+        "psr-4": {"niksnv\\treeView\\": ""}
     }
 }
