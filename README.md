@@ -1,7 +1,5 @@
 # yii2-TreeView
 This module extends Yii2 GridView and allows you to build simple TreeGrid with multiple levels of grouping.
-# Description
-group
 # Example
 Controller:
 ```php
