@@ -5,7 +5,8 @@ namespace niksnv\treeView;
 use yii\base\Object;
 
 
-class TreeObject extends Object {
+class TreeObject extends Object
+{
     public $level = 0;
     public $key;
     public $data;

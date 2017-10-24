@@ -10,36 +10,23 @@ use yii\helpers\Html;
 
 class TreeView extends GridView
 {
+    private $_rows = [];
 
     public $group;
     public $treeObject;
-    public $columns = [];
-    public $bootstrap = false;
-    private $_rows = [];
     public $labelTreeOffset = 15;
     public $rootLabel = null;
     public $tableOptions = ['class' => 'table table-bordered', 'style' => 'background:white'];
 
     public function renderTreeRows($object)
     {
-        $cells = [];
         if (!$object->lastGroup) {
-            foreach ($this->columns as $index => $column) {
-                $array_func = ($index !== 0) ? $object->func : $object->group_label;
-                $cells[] = $column->renderTreeCell($array_func, $object->key, $index, ($index === 0) ? ($object->level * $this->labelTreeOffset) : false);
-            }
-            $this->_rows[] = $this->renderTreeRow(['level' => $object->level, 'key' => (!$object->root) ? $object->group_key : 'root', 'value' => current(array_values($object->group_label)),
-                'groupRow' => true, 'name' => current(array_keys($object->group_label))], $object->key, $object->level, $cells);
+            $this->renderTreeCells($object);
             foreach ($object->children as $child) {
                 $this->renderTreeRows($child);
             }
         } else {
-            foreach ($this->columns as $index => $column) {
-                $array_func = ($index !== 0) ? $object->func : $object->group_label;
-                $cells[] = $column->renderTreeCell($array_func, $object->key, $index, ($index === 0) ? ($object->level * $this->labelTreeOffset) : false);
-            }
-            $this->_rows[] = $this->renderTreeRow(['level' => $object->level, 'key' => (!$object->root) ? $object->group_key : 'root', 'value' => current(array_values($object->group_label)),
-                'groupRow' => true, 'name' => current(array_keys($object->group_label))], $object->key, $object->level, $cells);
+            $this->renderTreeCells($object);
             foreach ($object->children as $index => $child) {
                 $cells = [];
                 $data = $child->data;
@@ -62,6 +49,21 @@ class TreeView extends GridView
                 }
             }
         }
+    }
+
+    private function renderTreeCells($object)
+    {
+        $cells = [];
+        foreach ($this->columns as $index => $column) {
+            if (isset($column->function) && !empty($column->function)) {
+                $array_func = [$column->attribute => $object->func[$index]];
+            } else {
+                $array_func = ($index !== 0) ? $object->func : $object->group_label;
+            }
+            $cells[] = $column->renderTreeCell($array_func, $object->key, $index, ($index === 0) ? ($object->level * $this->labelTreeOffset) : false);
+        }
+        $this->_rows[] = $this->renderTreeRow(['level' => $object->level, 'key' => (!$object->root) ? $object->group_key : 'root', 'value' => current(array_values($object->group_label)),
+            'groupRow' => true, 'name' => current(array_keys($object->group_label))], $object->key, $object->level, $cells);
     }
 
     public function renderTreeRow($model, $key, $index, $cells)
@@ -144,32 +146,36 @@ class TreeView extends GridView
     private function executeFunction(&$object)
     {
         $link_data = $object->lastGroup ? 'data' : 'func';
-        foreach ($this->columns as $column) {
+        foreach ($this->columns as $index => $column) {
             $data = [];
             $name = $column->attribute;
-            if (!empty($column->function)) {
+            if (isset($column->function) && !empty($column->function)) {
                 foreach ($object->children as $value) {
                     $data_array = $value->$link_data;
-                    if (!array_key_exists($name, (is_object($data_array) ? $data_array->attributes : $data_array))) {
-                        throw new InvalidConfigException('Wrong column ' . $name);
+                    if ($object->lastGroup) {
+                        if (!array_key_exists($name, (is_object($data_array) ? $data_array->attributes : $data_array))) {
+                            throw new InvalidConfigException('Wrong column ' . $name);
+                        }
+                        $data[] = $data_array[$name];
+                    } else {
+                        $data[] = $data_array[$index];
                     }
-                    $data[] = $data_array[$name];
                 }
                 switch ($column->function) {
                     case 'F_SUM':
-                        $object->func[$name] = array_sum($data);
+                        $object->func[$index] = array_sum($data);
                         break;
                     case 'F_MAX':
-                        $object->func[$name] = max($data);
+                        $object->func[$index] = max($data);
                         break;
                     case 'F_MIN':
-                        $object->func[$name] = min($data);
+                        $object->func[$index] = min($data);
                         break;
                     case 'F_AVG':
-                        $object->func[$name] = array_sum($data) / count($data);
+                        $object->func[$index] = array_sum($data) / count($data);
                         break;
                     case 'F_COUNT':
-                        $object->func[$name] = $object->lastGroup ? count($data) : array_sum($data);
+                        $object->func[$index] = $object->lastGroup ? count($data) : array_sum($data);
                         break;
                     default:
                         throw new InvalidConfigException('Wrong function ' . $column->function);
@@ -199,6 +205,21 @@ class TreeView extends GridView
             }
             $this->columns[$i] = $column;
         }
+    }
+
+    protected function createDataColumn($text)
+    {
+        if (!preg_match('/^([^:]+)(:(\w*))?(:(.*))?$/', $text, $matches)) {
+            throw new InvalidConfigException('The column must be specified in the format of "attribute", "attribute:format" or "attribute:format:label"');
+        }
+
+        return Yii::createObject([
+            'class' => $this->dataColumnClass ?: TreeColumn::className(),
+            'grid' => $this,
+            'attribute' => $matches[1],
+            'format' => isset($matches[3]) ? $matches[3] : 'text',
+            'label' => isset($matches[5]) ? $matches[5] : null,
+        ]);
     }
 
 }
